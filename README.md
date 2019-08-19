@@ -3,7 +3,7 @@
 
 This repository contains scripts and libraries to simplify interaction with the CATH / SWISS-MODEL (CATH-SM) protein modelling pipeline.
 
-The interacts with the [public API](https://api01.cathdb.info/swagger) of the server [`cathsm-server`](https://github.com/CATH-SWISSMODEL/cathsm-server).
+The interacts with the [public API](https://api01.cathdb.info/swagger) of a running version of [`cathsm-server`](https://github.com/CATH-SWISSMODEL/cathsm-server).
 
 ## Setup
 
@@ -69,7 +69,7 @@ override the `--api1_base` parameter to point to the base URL of your server ins
 #### API2: Build a 3D model from template alignment data with the SWISS-MODEL API
 
 ```bash
-$ ./scripts/api2.py --in example_data/A0PJE2__35-316.json --out tmp.pdb
+./scripts/api2.py --in example_data/A0PJE2__35-316.json --out tmp.pdb
 ```
 
 input (ie `example_data/A0PJE2__35-316.json`):
