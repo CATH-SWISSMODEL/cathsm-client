@@ -20,9 +20,12 @@ setup(
         'scripts/cathsm-api2',
     ],
     install_requires=[
-        'xdg',
-#        'getpass',
         'requests',
+        'colorlog',
+        'xdg',
+        'cathpy',
+        'biopython',
+        'pyswagger',
     ],
     classifiers=(
         "Programming Language :: Python :: 3",
