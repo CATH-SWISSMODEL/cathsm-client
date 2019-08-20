@@ -18,6 +18,7 @@ pyaml==19.4.1
 pyparsing==2.4.2
 pyswagger==0.8.39
 pytest==5.1.0
+pytest-cov==2.7.1
 PyYAML==5.1.2
 requests==2.22.0
 six==1.12.0
