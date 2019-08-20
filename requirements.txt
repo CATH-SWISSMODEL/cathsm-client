@@ -3,6 +3,7 @@ attrs==18.2.0
 cathpy>=0.1.13
 certifi==2018.11.29
 chardet==3.0.4
+codecov==2.0.15
 idna==2.8
 more-itertools==5.0.0
 pluggy==0.8.1
