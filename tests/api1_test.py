@@ -24,8 +24,7 @@ EXAMPLE_DATA_PATH = os.path.join(
 EXAMPLE_USER = 'apitest'
 EXAMPLE_PASSWORD = 'Aaewfijbovf12c12ecwerbq'
 
-#SERVER_BASE_URL = 'http://www.cathdb.info/cathsm-api'
-SERVER_BASE_URL = 'http://127.0.0.1:8000'
+SERVER_BASE_URL = 'https://api01.cathdb.info'
 
 
 class CathSelectTemplateClientTest(unittest.TestCase):
@@ -38,7 +37,7 @@ class CathSelectTemplateClientTest(unittest.TestCase):
 
         self.assertIsInstance(client, clients.CathSelectTemplateClient)
 
-        self.assertEqual(client.base_url, 'http://www.cathdb.info/cathsm')
+        self.assertEqual(client.base_url, 'https://api01.cathdb.info')
 
         self.assertEqual(
             client.get_url('submit'),
