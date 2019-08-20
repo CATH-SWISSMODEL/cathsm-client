@@ -1,6 +1,11 @@
 
 # CATH-SM Client
 
+[![Build Status](https://travis-ci.org/CATH-SWISSMODEL/cathsm-client.svg?branch=master)](https://travis-ci.org/CATH-SWISSMODEL/cathsm-client)
+
+[![codecov](https://codecov.io/gh/CATH-SWISSMODEL/cathsm-client/branch/master/graph/badge.svg)](https://codecov.io/gh/CATH-SWISSMODEL/cathsm-client)
+
+
 This repository contains scripts and libraries to simplify interaction with the CATH / SWISS-MODEL (CATH-SM) protein modelling pipeline.
 
 The interacts with the [public API](https://api01.cathdb.info/swagger) of a running version of [`cathsm-server`](https://github.com/CATH-SWISSMODEL/cathsm-server).
