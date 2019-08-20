@@ -6,18 +6,18 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="cathsm",
+    name="cathsm-client",
     version="0.0.1",
     author="Ian Sillitoe",
     author_email="i.sillitoe@ucl.ac.uk",
     description="API clients/libraries for CATH/SWISS-MODEL",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/CATH-SWISSMODEL/cath-swissmodel-api",
+    url="https://github.com/CATH-SWISSMODEL/cathsm-client",
     packages=find_packages(),
     test_suite="tests",
     scripts=[
-        'scripts/cathsm-api2',
+        'scripts/cathsm-api',
     ],
     install_requires=[
         'requests',
