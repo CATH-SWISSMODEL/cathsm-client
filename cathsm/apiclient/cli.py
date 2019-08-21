@@ -58,6 +58,9 @@ class ApiArgumentParser(argparse.ArgumentParser):
                           help='decrease output verbosity')
 
     def parse_args(self):
+        """
+        Parse CLI arguments (get auth details)
+        """
 
         args = super().parse_args()
 
@@ -80,6 +83,8 @@ class ApiArgumentParser(argparse.ArgumentParser):
         return args
 
     def _get_env(self, envkey, default=None):
+        """Get ENV (with default)"""
+
         var = None
         if envkey in os.environ:
             var = os.environ[envkey]
@@ -97,6 +102,7 @@ class LazyFun(object):
         self._evaluated = False
 
     def __str__(self):
+        """Render as string"""
         if not self._evaluated:
             self._string = self.fun()
         return self._string
