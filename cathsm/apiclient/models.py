@@ -15,11 +15,20 @@ class Model(object):
         try:
             data = json.load(infile)
         except Exception as err:
-            raise Exception(
-                "failed to load {} from json file '{}': {}".format(cls, infile, err))
-        return cls(**data)
+            LOG.error("failed to load json file '{}': {}".format(infile, err))
+            raise
+
+        try:
+            instance = cls(**data)
+        except Exception as err:
+            LOG.error("failed to create instance of class {} from data: {} (file: {})".format(
+                cls.__name__, data, infile))
+            raise
+
+        return instance
 
     def to_file(self, outfile):
+        """Save class instance to JSON file"""
         json.dump(self.as_dict(), outfile)
 
     def as_dict(self, *, remove_meta=True):
@@ -62,3 +71,4 @@ class SubmitAlignment(Model):
         self.assembly_id = assembly_id
         self.project_id = project_id
         self.meta = meta
+
