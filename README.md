@@ -2,7 +2,6 @@
 # CATH-SM Client
 
 [![Build Status](https://travis-ci.org/CATH-SWISSMODEL/cathsm-client.svg?branch=master)](https://travis-ci.org/CATH-SWISSMODEL/cathsm-client)
-
 [![codecov](https://codecov.io/gh/CATH-SWISSMODEL/cathsm-client/branch/master/graph/badge.svg)](https://codecov.io/gh/CATH-SWISSMODEL/cathsm-client)
 
 
