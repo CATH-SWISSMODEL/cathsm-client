@@ -170,8 +170,8 @@ class CathSelectTemplateManager(ApiClientManagerBase):
 
         if not self.submit_data:
             self.log.debug("Loading data from file '%s' ...", self.infile)
-            with open(self.infile) as infile:
-                self.submit_data = SubmitSelectTemplate.load(infile)
+            with open(self.infile) as in_fh:
+                self.submit_data = SubmitSelectTemplate.load(in_fh)
 
         self.log.info("Submitting data ... ")
         self.log.debug("data: %s", self.submit_data.__dict__)
@@ -248,8 +248,8 @@ class SMAlignmentManager(ApiClientManagerBase):
         self.log.info("Submitting data ... ")
         if not self.submit_data:
             self.log.debug("Loading data from file '%s' ...", self.infile)
-            with open(self.infile) as infile:
-                self.submit_data = SubmitSelectTemplate.load(infile)
+            with open(self.infile) as in_fh:
+                self.submit_data = SubmitAlignment.load(in_fh)
 
         submit_r = api.submit(data=self.submit_data)
         project_id = submit_r['project_id']
