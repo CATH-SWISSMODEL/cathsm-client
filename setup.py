@@ -26,6 +26,8 @@ setup(
         'cathpy',
         'biopython',
         'pyswagger',
+        'pytest',
+        'pytest-cov',
     ],
     classifiers=(
         "Programming Language :: Python :: 3",
