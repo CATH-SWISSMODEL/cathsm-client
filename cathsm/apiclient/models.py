@@ -1,6 +1,8 @@
 import json
 import logging
 
+from Bio import SeqIO
+
 LOG = logging.getLogger(__name__)
 
 
@@ -52,6 +54,28 @@ class SubmitSelectTemplate(Model):
         self.query_sequence = str(query_sequence)
         self.task_id = task_id
         self.meta = meta
+
+    @classmethod
+    def load_from_fasta(cls, infile):
+        """Creates a new instance of this model from a FASTA filehandle."""
+        try:
+            for seq in SeqIO.parse(infile, "fasta"):
+                first_seq = seq
+                break
+            data = {'query_id': first_seq.id, 'query_sequence': first_seq.seq}
+        except Exception as err:
+            LOG.error("failed to load FASTA file: %s", err)
+            raise
+
+        try:
+            instance = cls(**data)
+        except Exception as err:
+            LOG.error("failed to create instance of class {} from data: {} (file: {})".format(
+                cls.__name__, data, infile))
+            raise
+
+        return instance
+
 
 
 class SubmitAlignment(Model):
