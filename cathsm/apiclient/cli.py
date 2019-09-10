@@ -4,7 +4,6 @@ Common classes and helpers for CLI interaction
 
 # core
 import argparse
-import json
 import logging
 import os
 
