@@ -4,14 +4,12 @@ import tempfile
 import unittest
 
 # local
-from cathsm.apiclient import clients, managers
+from cathsm.apiclient import clients, managers, config
 
 DELETE_TEMP_FILES = False
 
 EXAMPLE_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'example_data')
-EXAMPLE_USER = 'junk@sillit.com'
-EXAMPLE_PASSWORD = 'FJRbnz'
 
 
 class SMAlignmentClientTest(unittest.TestCase):
@@ -50,8 +48,10 @@ class SMAlignmentManagerTest(unittest.TestCase):
 
         # run with user auth
         outfile1 = tempfile.NamedTemporaryFile(delete=DELETE_TEMP_FILES)
-        client1 = managers.SMAlignmentManager(infile=infile, outfile=outfile1.name,
-                                              api_user=EXAMPLE_USER, api_password=EXAMPLE_PASSWORD)
+        client1 = managers.SMAlignmentManager(infile=infile,
+                                              outfile=outfile1.name,
+                                              api_user=config.API2_TEST_USER,
+                                              api_password=config.API2_TEST_PASSWORD)
         client1.run()
 
         api_token = client1.api_token
@@ -63,7 +63,8 @@ class SMAlignmentManagerTest(unittest.TestCase):
 
         # run with token auth
         outfile2 = tempfile.NamedTemporaryFile(delete=DELETE_TEMP_FILES)
-        client2 = managers.SMAlignmentManager(infile=infile, outfile=outfile2.name,
+        client2 = managers.SMAlignmentManager(infile=infile,
+                                              outfile=outfile2.name,
                                               api_token=api_token)
         client2.run()
         self.assertTrue(os.path.isfile(outfile2.name),

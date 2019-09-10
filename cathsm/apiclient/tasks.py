@@ -1,11 +1,8 @@
 # core
 
-import argparse
 import logging
 import os
 import re
-import string
-import tempfile
 from multiprocessing import Pool
 
 # non-core
@@ -39,14 +36,17 @@ class CathSMSequenceTask:
 
     GLOBAL_SEQUENCE_COUNT = 0
 
-    def __init__(self, *, seq_id, seq_str, outdir, api1_base, api2_base, api1_user, api2_user, seq_count=None, log=None):
+    def __init__(self, *, seq_id, seq_str, outdir, api1_base, api2_base, api1_user, api2_user,
+                 api1_password=None, api2_password=None, seq_count=None, log=None):
         self.seq_id = seq_id
         self.seq_str = seq_str
-        self.outdir = outdir
+        self.outdir = os.path.abspath(outdir)
         self.api1_base = api1_base
         self.api2_base = api2_base
         self.api1_user = api1_user
         self.api2_user = api2_user
+        self.api1_password = api1_password
+        self.api2_password = api2_password
         self.seq_count = seq_count
         if not log:
             self.log = LOG
@@ -82,7 +82,7 @@ class CathSMSequenceTask:
         seq_lines = [seq_str[i:i+char_width]
                      for i in range(0, len(seq_str), char_width)]
         for seq_line in seq_lines:
-            log.info("{}".format(seq_line))
+            log.info("%s", seq_line)
 
         log_br(log)
         log.info("Searching for template structures ... ")
@@ -94,6 +94,7 @@ class CathSMSequenceTask:
             base_url=self.api1_base,
             submit_data=api1submit,
             api_user=self.api1_user,
+            api_password=self.api1_password,
             logger=log,
         )
 
@@ -107,14 +108,16 @@ class CathSMSequenceTask:
         # to clients / managers / swagger? ...
 
         # swagger_app, swagger_client = api1.api_client.get_swagger()
-        # hit_operation_id = 'select-template_resolved_hits_read'  # TODO: this is nasty
+        # hit_operation_id = 'select-template_resolved_hits_read'
+        
+        # TODO: this is nasty
         # req, resp = swagger_app.op[hit_operation_id](
         #     uuid=api1.task_uuid)
         # req.produce('application/json')
         # hits = swagger_client.request((req, resp)).data
 
         api1_base = self.api1_base
-        headers = {'Authorization': 'Token ' + api1.api_token}
+        headers = api1.api_client.headers
 
         log.info("Getting resolved hit info ...")
         hits_url = '{api1_base}/api/select-template/{task_uuid}/resolved_hits'.format(
@@ -147,8 +150,9 @@ class CathSMSequenceTask:
             log_br(log)
 
             if not alns:
-                log.warning("Found no valid template alignments from hit '%s'. This is probably due " + \
-                    "to a lack of non-discontinuous CATH domains in the matching FunFam (skipping modelling step).", hit['ff_id'])
+                log.warning("Found no valid template alignments from hit '%s'. " + \
+                        "This is probably due to a lack of non-discontinuous CATH domains " + \
+                        "in the matching FunFam (skipping modelling step).", hit['ff_id'])
                 continue
 
             log_prefix = 'HIT{}'.format(hit_count)
@@ -173,13 +177,14 @@ class CathSMSequenceTask:
                 auth_asym_id=aln['auth_asym_id'],
             )
 
-            pdb_out_id = re.sub('[\W]+', '', seq_id)
+            pdb_out_id = re.sub(r'[\W]+', '', seq_id)
 
             api2 = managers.SMAlignmentManager(
                 base_url=self.api2_base,
                 submit_data=api2submit,
                 outfile="{}.pdb".format(pdb_out_id),
                 api_user=self.api2_user,
+                api_password=self.api2_password,
                 logger=log,
             )
             api2.run()
@@ -191,7 +196,9 @@ class CathSMSequenceFileTask:
     Runs the main modelling pipeline for a set of sequences
     """
 
-    def __init__(self, *, infile, outdir, max_workers, api1_base, api2_base, api1_user, api2_user, startseq=1):
+    def __init__(self, *, infile, outdir, max_workers, api1_base, api2_base,
+                 api1_user, api2_user, api1_password=None, api2_password=None, 
+                 startseq=1):
         self.infile = infile
         self.outdir = outdir
         self.max_workers = max_workers
@@ -200,6 +207,8 @@ class CathSMSequenceFileTask:
         self.api2_base = api2_base
         self.api1_user = api1_user
         self.api2_user = api2_user
+        self.api1_password = api1_password
+        self.api2_password = api2_password
 
     def run(self):
 
@@ -211,6 +220,8 @@ class CathSMSequenceFileTask:
         api2_base = self.api2_base
         api1_user = self.api1_user
         api2_user = self.api2_user
+        api1_password = self.api1_password
+        api2_password = self.api2_password
 
         LOG.info("Parsing sequences from %s", infile)
         log_hr()
@@ -247,6 +258,8 @@ class CathSMSequenceFileTask:
                                           api2_base=api2_base,
                                           api1_user=api1_user,
                                           api2_user=api2_user,
+                                          api1_password=api1_password,
+                                          api2_password=api2_password,
                                           outdir=outdir, )
             seq_task.run()
 

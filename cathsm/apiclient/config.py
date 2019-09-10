@@ -5,12 +5,21 @@ import os
 
 # non-core
 from xdg import XDG_CONFIG_HOME
-import getpass
 
 # local
 from cathsm.apiclient.errors import ConfigError
 
 LOG = logging.getLogger(__name__)
+
+DEFAULT_API1_BASE = 'https://api01.cathdb.info'
+DEFAULT_API2_BASE = 'https://beta.swissmodel.expasy.org'
+
+API1_TEST_USER = 'apitest'
+API1_TEST_PASSWORD = 'Aaewfijbovf12c12ecwerbq'
+API2_TEST_USER = 'junk@sillit.com'
+API2_TEST_PASSWORD = 'FJRbnz'
+
+
 CONFIG_DIR = os.path.join(XDG_CONFIG_HOME, 'cath-swissmodel-api')
 os.makedirs(CONFIG_DIR, exist_ok=True)
 DEFAULT_CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
@@ -30,7 +39,7 @@ class ApiConfig(object):
 
         if os.path.isfile(filename):
             self._config.read(filename)
-            LOG.info("Loaded config from {}".format(filename))
+            LOG.info("Loaded config from %s (%s)", filename, self.section)
 
         if self.section not in self._config:
             self._config[self.section] = {}

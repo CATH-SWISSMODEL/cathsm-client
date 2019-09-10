@@ -33,8 +33,18 @@ class ApiClientManagerBase(object):
 
         self.log = logger
 
+        self.infile = infile
+        self.outfile = outfile
+        self.submit_data = submit_data
+        self.sleep = sleep
+        self.log_level = log_level
+
+        self.api_user = api_user
+        self.api_password = api_password
+        self.api_client = api_client
+
         if not config_section:
-            config_section = self.__class__.__name__
+            config_section = f'{api_user}::{api_client.base_url}'
 
         if config is None:
             config = ApiConfig(section=config_section)
@@ -46,32 +56,33 @@ class ApiClientManagerBase(object):
                 "Clearing existing config for section: '%s'", config.section)
             config.delete_section()
 
-        self.infile = infile
-        self.outfile = outfile
-        self.submit_data = submit_data
-        self.sleep = sleep
-        self.log_level = log_level
+        LOG.info("ApiClientManagerBase.authenticate")
 
-        self.api_token = api_token
-        self.api_user = api_user
-        self.api_password = api_password
-
-        self.api_client = api_client
-
-        if not self.api_token:
-            if self.api_user and self.api_password:
-                pass
-            elif 'api_token' in config:
-                self.api_token = config['api_token']
+        if not api_token:
+            self.log.info("Retrieving authentication details for '%s' ...", config_section)
+            if 'api_token' in config:
+                self.log.debug("Reusing existing API token: %s", config['api_token'])
+                api_token = config['api_token']
+            elif self.api_user and self.api_password:
+                self.log.debug("Password details provided for user '%s'", self.api_user)
             elif self.api_user:
-                LOG.info("Please specify password (user={}): {}".format(
+                self.log.debug("Require password details for user '%s'", self.api_user)
+                self.log.info("Please specify password (user={}): {}".format(
                     self.api_user, self.api_client.base_url))
                 self.api_password = getpass.getpass()
             else:
                 raise ArgError(
-                    "expected 'api_token' or 'api_user'")
+                    "must provide either 'api_token' or 'api_user'")
+
+        if api_token:
+            api_client.set_token(api_token=api_token)
+
 
         self._config = config
+
+    @property
+    def api_token(self):
+        return self.api_client.api_token
 
     @classmethod
     def new_from_cli(cls, *, parser=None):
@@ -136,14 +147,16 @@ class ApiClientManagerBase(object):
         self.log.debug("Setting API token in client")
         api.set_token(api_token=api_token)
 
+        return api_token
+
 
 class CathSelectTemplateManager(ApiClientManagerBase):
     """
     Selected template structure from sequence (via CATH API)
 
     Args:
-        api_client (CathSelectTemplateClient): override default client (optional)
-        base_url (str): create the default client with this base URL (optional)
+    * api_client (CathSelectTemplateClient): override default client (optional)
+    * base_url (str): create the default client with this base URL (optional)
     """
 
     def __init__(self, *, api_client=None, base_url=None, **kwargs):
@@ -162,7 +175,6 @@ class CathSelectTemplateManager(ApiClientManagerBase):
     def run(self):
 
         api = self.api_client
-        config = self._config
 
         self.log.info("Authenticating...")
         self.authenticate()
@@ -170,8 +182,15 @@ class CathSelectTemplateManager(ApiClientManagerBase):
 
         if not self.submit_data:
             self.log.debug("Loading data from file '%s' ...", self.infile)
-            with open(self.infile) as in_fh:
-                self.submit_data = SubmitSelectTemplate.load(in_fh)
+            submit_data = None
+            if self.infile.endswith('.fa') or self.infile.endswith('.fasta'):
+                with open(self.infile) as in_fh:
+                    submit_data = SubmitSelectTemplate.load_from_fasta(in_fh)
+            elif self.infile.endswith('.json'):
+                with open(self.infile) as in_fh:
+                    submit_data = SubmitSelectTemplate.load(in_fh)
+            
+            self.submit_data = submit_data
 
         self.log.info("Submitting data ... ")
         self.log.debug("data: %s", self.submit_data.__dict__)
@@ -241,7 +260,6 @@ class SMAlignmentManager(ApiClientManagerBase):
     def run(self):
 
         api = self.api_client
-        config = self._config
 
         self.authenticate()
 

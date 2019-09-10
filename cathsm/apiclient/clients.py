@@ -39,7 +39,7 @@ class ApiClientBase():
             headers = {}
         self.headers = headers
 
-        self._api_token = None
+        self.api_token = None
         if api_token:
             self.set_token(api_token=api_token)
 
@@ -128,21 +128,24 @@ class ApiClientBase():
 
     def set_token(self, *, api_token=None):
         """Sets the token for the client."""
-        self._api_token = api_token
+        self.api_token = api_token
         headers = {'Authorization': 'Token {}'.format(api_token)}
         self.headers = headers
 
-    def authenticate(self, *, api_user=None, api_pass=None):
+    def authenticate(self, *, api_user, api_pass):
         """
         Authenticates the client.
 
         Args:
-            api_user (str): username
-            api_pass (str): password
+        * api_user (str): username
+        * api_pass (str): password
 
         Returns:
             token_id (str): API token
         """
+
+        if not api_user:
+            raise Exception("api_user must be set to a valid string")
 
         data = {'username': api_user, 'password': api_pass}
 
@@ -153,7 +156,16 @@ class ApiClientBase():
             headers={'accept': 'application/json'})
 
         LOG.debug("auth_response [%s]: %s", res.status_code, res.json())
-        response_data = res.json()
+        try:
+            res.raise_for_status()
+            response_data = res.json()
+        except requests.exceptions.HTTPError:
+            LOG.error("Authentication failed: server reported error: %s %s", res.status_code, res.content)
+            raise
+        except json.decoder.JSONDecodeError:
+            LOG.error("Failed to parse JSON from authentication response: %s", res.content[:200])
+            raise
+
         if 'token' in response_data:
             token_id = response_data['token']
             LOG.debug('Using token %s', token_id)
@@ -180,7 +192,7 @@ class ApiClientBase():
         auth = Security(app)
         # TODO: this isn't working...
         # ValueError: Unknown security name: [api_key]
-        auth.update_with('api_key', self._api_token)
+        auth.update_with('api_key', self.api_token)
 
         # init swagger client
         client = Client(auth)

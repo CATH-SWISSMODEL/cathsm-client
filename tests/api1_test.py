@@ -13,7 +13,7 @@ import unittest
 import requests
 
 # local
-from cathsm.apiclient import clients, managers
+from cathsm.apiclient import clients, managers, config
 
 LOG = logging.getLogger(__name__)
 
@@ -21,16 +21,11 @@ DELETE_TEMP_FILES = False
 
 EXAMPLE_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'example_data')
-EXAMPLE_USER = 'apitest'
-EXAMPLE_PASSWORD = 'Aaewfijbovf12c12ecwerbq'
-
-SERVER_BASE_URL = 'https://api01.cathdb.info'
-
 
 class CathSelectTemplateClientTest(unittest.TestCase):
 
     def setUp(self):
-        self.base_url = SERVER_BASE_URL
+        self.base_url = config.DEFAULT_API1_BASE
 
     def test_defaults(self):
         client = clients.CathSelectTemplateClient()
@@ -55,10 +50,10 @@ class CathSelectTemplateClientTest(unittest.TestCase):
 class CathSelectTemplateManagerTest(unittest.TestCase):
 
     def setUp(self):
-        self.base_url = SERVER_BASE_URL
+        self.base_url = config.DEFAULT_API1_BASE
         self.auth_data = {
-            "username": EXAMPLE_USER,
-            "password": EXAMPLE_PASSWORD
+            "username": config.API1_TEST_USER,
+            "password": config.API1_TEST_PASSWORD,
         }
         self.infile = os.path.join(
             EXAMPLE_DATA_PATH, 'select-template-01.json')
@@ -116,14 +111,17 @@ class CathSelectTemplateManagerTest(unittest.TestCase):
 
         # run with user auth
         client1 = managers.CathSelectTemplateManager(base_url=self.base_url,
-                                                     infile=self.infile, outfile=outfile1.name,
-                                                     api_user=EXAMPLE_USER, api_password=EXAMPLE_PASSWORD)
+                                                     infile=self.infile,
+                                                     outfile=outfile1.name,
+                                                     api_user=config.API1_TEST_USER,
+                                                     api_password=config.API1_TEST_PASSWORD)
 
         client1.run()
         self.assertTrue(client1.funfam_resolved_scan(),
                         'retrieved funfam_resolved_scan (user auth)')
 
         api_token = client1.api_token
+        LOG.debug("api_token: %s", api_token)
 
         # run with token auth
         outfile2 = tempfile.NamedTemporaryFile(delete=DELETE_TEMP_FILES)
@@ -137,6 +135,7 @@ class CathSelectTemplateManagerTest(unittest.TestCase):
         # run with token auth (automatically retrieved from config)
         outfile3 = tempfile.NamedTemporaryFile(delete=DELETE_TEMP_FILES)
         client3 = managers.CathSelectTemplateManager(base_url=self.base_url,
+                                                     api_user=config.API1_TEST_USER,
                                                      infile=self.infile, outfile=outfile3.name,)
         client3.run()
         self.assertTrue(client3.funfam_resolved_scan(),
