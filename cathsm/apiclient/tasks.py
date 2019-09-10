@@ -65,10 +65,8 @@ class CathSMSequenceTask:
         outdir = self.outdir
         seq_count = self.seq_count
 
-        os.chdir(outdir)
-
         log = logging.getLogger('process_sequence_{}'.format(seq_count))
-        fh = logging.FileHandler('process.log')
+        fh = logging.FileHandler(os.path.join(outdir, 'process.log'))
         fh.setLevel(logging.INFO)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -182,7 +180,7 @@ class CathSMSequenceTask:
             api2 = managers.SMAlignmentManager(
                 base_url=self.api2_base,
                 submit_data=api2submit,
-                outfile="{}.pdb".format(pdb_out_id),
+                outfile=os.path.join(outdir, "{}.pdb".format(pdb_out_id)),
                 api_user=self.api2_user,
                 api_password=self.api2_password,
                 logger=log,
