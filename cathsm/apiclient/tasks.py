@@ -106,7 +106,7 @@ class CathSMSequenceTask:
         # to clients / managers / swagger? ...
 
         # swagger_app, swagger_client = api1.api_client.get_swagger()
-        # hit_operation_id = 'select-template_resolved_hits_read'
+        # hit_operation_id = 'select-template_hits_read'
         
         # TODO: this is nasty
         # req, resp = swagger_app.op[hit_operation_id](
@@ -117,18 +117,18 @@ class CathSMSequenceTask:
         api1_base = self.api1_base
         headers = api1.api_client.headers
 
-        log.info("Getting resolved hit info ...")
-        hits_url = '{api1_base}/api/select-template/{task_uuid}/resolved_hits'.format(
+        log.info("Getting hit info ...")
+        hits_url = '{api1_base}/api/select-template/{task_uuid}/hits'.format(
             api1_base=api1_base, task_uuid=task_uuid)
         log.info("GET %s", hits_url)
         resp = requests.get(hits_url, headers=headers)
         resp.raise_for_status()
         hits = resp.json()
-        log.info("  ... retrieved %s resolved hits", len(hits))
+        log.info("  ... retrieved %s hits", len(hits))
         log_br(log)
 
         # hits = managers.GetSelectTemplateHits(task_uuid=api1.task_uuid)
-        # hits = api1.funfam_resolved_scan_hits()
+        # hits = api1.funfam_scan_hits()
 
         for hit_count, hit in enumerate(hits, 1):
 

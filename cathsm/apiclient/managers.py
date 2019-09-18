@@ -216,14 +216,14 @@ class CathSelectTemplateManager(ApiClientManagerBase):
         result_r = api.results(self.task_uuid)
 
         self.log.debug("result: %s", str(result_r)[:100])
-        funfam_resolved_scan = self.funfam_resolved_scan()
+        funfam_scan = self.funfam_scan()
 
-        self.log.info("Resolved Funfam Matches:")
-        hit_lines = funfam_resolved_scan.as_tsv().strip().split('\n')
+        self.log.info("Funfam Matches:")
+        hit_lines = funfam_scan.as_tsv().strip().split('\n')
         for hit_count, line in enumerate(hit_lines, 0):
             self.log.info("%-3s %s", hit_count if hit_count > 0 else '', line)
 
-        if not funfam_resolved_scan.results:
+        if not funfam_scan.results:
             raise NoResultsError(
                 "failed to get any results from funfam_resolved_scan")
 
