@@ -4,6 +4,7 @@ import re
 import os
 import tempfile
 import unittest
+from shutil import copyfile
 
 # local
 from cathsm.apiclient import config
@@ -11,6 +12,7 @@ from cathsm.apiclient.tasks import CathSMSequenceFileTask
 
 LOG = logging.getLogger(__name__)
 DELETE_TEMP_FILES = False
+BOOTSTRAP_TEST_FILES = os.environ.get('BOOTSTRAP_TEST_FILES', 0)
 
 class TasksTest(unittest.TestCase):
 
@@ -43,6 +45,10 @@ class TasksTest(unittest.TestCase):
         task.run()
 
         output_pdb_file = os.path.join(outdir.name, 'query', 'query.pdb')
+
+        if BOOTSTRAP_TEST_FILES:
+            LOG.info("BOOTSTRAP_TEST_FILES=1, copying test data: %s -> %s", output_pdb_file, expected_pdb_file)
+            copyfile(output_pdb_file, expected_pdb_file)
 
         self.assertTrue(os.path.exists(output_pdb_file))
         with open(output_pdb_file, 'rt') as got_fh, open(expected_pdb_file, 'rt') as expected_fh:
