@@ -7,7 +7,7 @@
 
 This repository contains scripts and libraries to simplify interaction with the CATH / SWISS-MODEL (CATH-SM) protein modelling pipeline.
 
-By default, this interacts with the [public API](https://api01.cathdb.info/swagger) of a running version of [`cathsm-server`](https://github.com/CATH-SWISSMODEL/cathsm-server) in addition to the [public API](https://beta.swissmodel.expasy.org/swagger/) of [SWISS-MODEL](https://beta.swissmodel.expasy.org/). However the command line options allow a locally running version of the server to be tested instead.
+By default, this interacts with the [public API](https://api01.cathdb.info/swagger) of a running version of [`cathsm-server`](https://github.com/CATH-SWISSMODEL/cathsm-server) in addition to the [public API](https://beta.swissmodel.expasy.org/swagger/) of [SWISS-MODEL](https://beta.swissmodel.expasy.org/). However the command line options allow a locally running version of these backend servers to be tested as well.
 
 Note: both of these backend APIs require valid authentication details to submit jobs (ie username / password). Login accounts are freely available and need to be obtained from the resources before running this client.
 
