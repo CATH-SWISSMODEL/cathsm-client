@@ -12,8 +12,8 @@ import requests
 from pyswagger import App, Security
 from pyswagger.contrib.client.requests import Client
 from pyswagger.utils import jp_compose
-from cathpy import funfhmmer
-import cathpy.models
+from cathpy.core import funfhmmer
+import cathpy.core.models as models
 
 # local
 from cathsm.apiclient.errors import InvalidTokenError, AuthenticationError, NoResultsError
@@ -104,12 +104,22 @@ class ApiClientBase():
         return res
 
     def check_response(self, *, response, status_success=200):
+        """
+        Check the response for general errors
+
+        Throws:
+            InvalidTokenError: token does not match server (try getting new token)
+            AuthenticationError: general authentication error
+
+        """
 
         if response.status_code == 401:
             if re.search(r'invalid token', response.text, re.IGNORECASE):
-                raise InvalidTokenError('failed to authenticate client: submitted API token is invalid (try deleting and refreshing)')
+                raise InvalidTokenError(
+                    'failed to authenticate client: submitted API token is invalid (try deleting and refreshing)')
             else:
-                raise AuthenticationError('failed to authenticate client: {}'.format(response.text))
+                raise AuthenticationError(
+                    'failed to authenticate client: {}'.format(response.text))
 
         if response.status_code != status_success:
             LOG.error("Error: failed to submit data: status=%s (expected %s), msg=%s",
@@ -137,8 +147,8 @@ class ApiClientBase():
         Authenticates the client.
 
         Args:
-        * api_user (str): username
-        * api_pass (str): password
+            api_user (str): username
+            api_pass (str): password
 
         Returns:
             token_id (str): API token
@@ -160,10 +170,12 @@ class ApiClientBase():
             res.raise_for_status()
             response_data = res.json()
         except requests.exceptions.HTTPError:
-            LOG.error("Authentication failed: server reported error: %s %s", res.status_code, res.content)
+            LOG.error("Authentication failed: server reported error: %s %s",
+                      res.status_code, res.content)
             raise
         except json.decoder.JSONDecodeError:
-            LOG.error("Failed to parse JSON from authentication response: %s", res.content[:200])
+            LOG.error(
+                "Failed to parse JSON from authentication response: %s", res.content[:200])
             raise
 
         if 'token' in response_data:
@@ -390,13 +402,14 @@ class CathSelectTemplateClient(SubmitStatusResultsApiClient):
             replacement_fields={"task_id": task_id})
 
         if not cathsm_results_data['results_json']:
-            LOG.warning('failed to get any results (results_json is empty): %s', cathsm_results_data)
+            LOG.warning(
+                'failed to get any results (results_json is empty): %s', cathsm_results_data)
             # TODO: trying to indicate a result that corresponds to zero funfam
-            # matches. Should be able to use valid query_fasta/cath_version 
+            # matches. Should be able to use valid query_fasta/cath_version
             # and funfam_scan=None...
             results_data = {
-                'query_fasta': None, 
-                'funfam_scan': None, 
+                'query_fasta': None,
+                'funfam_scan': None,
                 'funfam_resolved_scan': None,
                 'cath_version': None,
             }
@@ -417,7 +430,7 @@ class CathSelectTemplateClient(SubmitStatusResultsApiClient):
         Provides access to the response object (containing scan results)
 
         Returns:
-            result_response (:class:`cathpy.funfhmmer.ResultResponse`)
+            result_response (:class:`cathpy.core.funfhmmer.ResultResponse`)
         """
         if not self._result_response:
             raise NoResultsError(
@@ -429,7 +442,7 @@ class CathSelectTemplateClient(SubmitStatusResultsApiClient):
         Provides access to the scan results (all matches)
 
         Returns:
-            scan (:class:`cathpy.models.Scan`): scan results for all FunFam matches
+            scan (:class:`cathpy.core.models.Scan`): scan results for all FunFam matches
 
         Throws:
             NoResultsError: results must have been fetched before calling this method 
@@ -441,7 +454,7 @@ class CathSelectTemplateClient(SubmitStatusResultsApiClient):
         Provides access to the scan results (resolved to best domain matches)
 
         Returns:
-            scan (:class:`cathpy.models.Scan`): scan results for resolved FunFam matches
+            scan (:class:`cathpy.core.models.Scan`): scan results for resolved FunFam matches
 
         Throws:
             NoResultsError: results must have been fetched before calling this method 

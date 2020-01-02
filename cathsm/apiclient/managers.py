@@ -59,14 +59,18 @@ class ApiClientManagerBase(object):
         LOG.info("ApiClientManagerBase.authenticate")
 
         if not api_token:
-            self.log.info("Retrieving authentication details for '%s' ...", config_section)
+            self.log.info(
+                "Retrieving authentication details for '%s' ...", config_section)
             if 'api_token' in config:
-                self.log.debug("Reusing existing API token: %s", config['api_token'])
+                self.log.debug("Reusing existing API token: %s",
+                               config['api_token'])
                 api_token = config['api_token']
             elif self.api_user and self.api_password:
-                self.log.debug("Password details provided for user '%s'", self.api_user)
+                self.log.debug(
+                    "Password details provided for user '%s'", self.api_user)
             elif self.api_user:
-                self.log.debug("Require password details for user '%s'", self.api_user)
+                self.log.debug(
+                    "Require password details for user '%s'", self.api_user)
                 self.log.info("Please specify password (user={}): {}".format(
                     self.api_user, self.api_client.base_url))
                 self.api_password = getpass.getpass()
@@ -76,7 +80,6 @@ class ApiClientManagerBase(object):
 
         if api_token:
             api_client.set_token(api_token=api_token)
-
 
         self._config = config
 
@@ -189,7 +192,7 @@ class CathSelectTemplateManager(ApiClientManagerBase):
             elif self.infile.endswith('.json'):
                 with open(self.infile) as in_fh:
                     submit_data = SubmitSelectTemplate.load(in_fh)
-            
+
             self.submit_data = submit_data
 
         self.log.info("Submitting data ... ")
@@ -231,15 +234,15 @@ class CathSelectTemplateManager(ApiClientManagerBase):
         assert self.task_uuid
 
     def funfam_scan(self):
-        """Returns the funfam scan results as :class:`cathpy.models.Scan`"""
+        """Returns the funfam scan results as :class:`cathpy.core.models.Scan`"""
         return self.api_client.funfam_scan()
 
     def funfam_resolved_scan(self):
-        """Returns the resolved funfam scan results as :class:`cathpy.models.Scan`"""
+        """Returns the resolved funfam scan results as :class:`cathpy.core.models.Scan`"""
         return self.api_client.funfam_resolved_scan()
 
     def funfam_resolved_scan_hits(self):
-        """Returns the resolved funfam scan hits as [:class:`cathpy.models.ScanHit`]"""
+        """Returns the resolved funfam scan hits as [:class:`cathpy.core.models.ScanHit`]"""
         return self.api_client.funfam_resolved_scan().results[0].hits
 
 
