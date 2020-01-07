@@ -1,5 +1,6 @@
 # core
-
+import hashlib
+import json
 import logging
 import os
 import re
@@ -7,6 +8,7 @@ from multiprocessing import Pool
 
 # non-core
 import requests
+import luigi
 from Bio import SeqIO
 
 # local
@@ -29,92 +31,47 @@ def log_hr(log=None):
     log.info('')
 
 
-class CathSMSequenceTask:
+class CathSelectTemplateHitsTask(luigi.Task):
     """
-    Runs the main modelling pipeline for a given query sequence
+    Runs a CathSelectTemplate job and caches 'hits' results as JSON file
     """
 
-    GLOBAL_SEQUENCE_COUNT = 0
+    seq_id = luigi.Parameter()
+    seq_str = luigi.Parameter()
+    api1_base = luigi.Parameter()
+    api1_user = luigi.Parameter()
+    api1_password = luigi.Parameter()
+    work_dir = luigi.Parameter()
 
-    def __init__(self, *, seq_id, seq_str, outdir, api1_base, api2_base, api1_user, api2_user,
-                 api1_password=None, api2_password=None, seq_count=None, log=None):
-        self.seq_id = seq_id
-        self.seq_str = seq_str
-        self.outdir = os.path.abspath(outdir)
-        self.api1_base = api1_base
-        self.api2_base = api2_base
-        self.api1_user = api1_user
-        self.api2_user = api2_user
-        self.api1_password = api1_password
-        self.api2_password = api2_password
-        self.seq_count = seq_count
-        if not log:
-            self.log = LOG
+    @property
+    def safe_seq_id(self, id_str):
+        re_safe = re.compile(r'[\W]+', re.UNICODE)
+        return re_safe.sub('', id_str)
 
-        self.GLOBAL_SEQUENCE_COUNT += 1
-        if not seq_count:
-            self.seq_count = self.GLOBAL_SEQUENCE_COUNT
+    @property
+    def outfile(self):
+        return f'{self.work_dir}/select_template.{self.seq_id}.json'
+
+    def output(self):
+        return luigi.LocalTarget(self.outfile)
 
     def run(self):
-        """
-        Processes an individual query sequence
-        """
-
-        seq_id = self.seq_id
-        seq_str = self.seq_str
-        outdir = self.outdir
-        seq_count = self.seq_count
-
-        log = logging.getLogger('process_sequence_{}'.format(seq_count))
-        fh = logging.FileHandler(os.path.join(outdir, 'process.log'))
-        fh.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        log.addHandler(fh)
-
-        log.info("SEQUENCE %s: %s (%s residues)",
-                 seq_count, seq_id, len(seq_str))
-
-        char_width = 80
-        seq_lines = [seq_str[i:i+char_width]
-                     for i in range(0, len(seq_str), char_width)]
-        for seq_line in seq_lines:
-            log.info("%s", seq_line)
-
-        log_br(log)
-        log.info("Searching for template structures ... ")
+        log = LOG
 
         api1submit = models.SubmitSelectTemplate(
-            query_id=seq_id, query_sequence=seq_str)
+            query_id=self.seq_id, query_sequence=self.seq_str)
 
         api1 = managers.CathSelectTemplateManager(
             base_url=self.api1_base,
             submit_data=api1submit,
             api_user=self.api1_user,
             api_password=self.api1_password,
-            logger=log,
         )
 
         api1.run()
 
-        task_uuid = api1.task_uuid
-
-        log_br(log)
-
-        # TODO: abstract the following chunk of hard coded URLs
-        # to clients / managers / swagger? ...
-
-        # swagger_app, swagger_client = api1.api_client.get_swagger()
-        # hit_operation_id = 'select-template_hits_read'
-        
-        # TODO: this is nasty
-        # req, resp = swagger_app.op[hit_operation_id](
-        #     uuid=api1.task_uuid)
-        # req.produce('application/json')
-        # hits = swagger_client.request((req, resp)).data
-
         api1_base = self.api1_base
+        task_uuid = api1.task_uuid
         headers = api1.api_client.headers
 
         log.info("Getting hit info ...")
@@ -125,21 +82,44 @@ class CathSMSequenceTask:
         resp.raise_for_status()
         hits = resp.json()
         log.info("  ... retrieved %s hits", len(hits))
-        log_br(log)
 
-        # hits = managers.GetSelectTemplateHits(task_uuid=api1.task_uuid)
-        # hits = api1.funfam_scan_hits()
+        log.info("Writing results to %s", self.outfile)
+        with open(self.outfile, 'wb') as fh:
+            fh.write(resp.content)
+
+
+@requires(CathSelectTemplateHitsTask)
+class AlignTemplateAggregator(luigi.Task):
+    """
+    Generates AlignTemplate task requirements from CathSelectTemplate results
+    """
+
+    def get_hits(self):
+        hits = None
+        with self.input().open('r') as infile:
+            hits = json.load(infile)
+        return hits
+
+    def run(self):
+
+        log = LOG
+        api1_base = self.api1_base
+        seq_id = self.seq_id
+        headers = {}
+        # headers = self.api1.api_client.headers
+
+        hits = self.get_hits()
 
         for hit_count, hit in enumerate(hits, 1):
 
             log_hr(log)
 
             log.info("SEQUENCE %s, HIT %s [%s]: FunFam '%s': %s",
-                     seq_count, hit_count, hit['query_range'], hit['ff_id'], hit['ff_name'])
+                     seq_id, hit_count, hit['query_range'], hit['ff_id'], hit['ff_name'])
 
             log.info("Getting template alignments ...")
-            aln_url = '{api1_base}/api/select-template/hit/{hit_uuid}/alignments'.format(
-                api1_base=api1_base, hit_uuid=hit['uuid'])
+            hit_uuid = hit['hit_uuid']
+            aln_url = f'{api1_base}/api/select-template/hit/{hit_uuid}/alignments'
             log.info("GET %s", aln_url)
             resp = requests.get(aln_url, headers=headers)
             resp.raise_for_status()
@@ -148,117 +128,63 @@ class CathSMSequenceTask:
             log_br(log)
 
             if not alns:
-                log.warning("Found no valid template alignments from hit '%s'. " + \
-                        "This is probably due to a lack of non-discontinuous CATH domains " + \
-                        "in the matching FunFam (skipping modelling step).", hit['ff_id'])
+                log.warning("Found no valid template alignments from hit '%s'. " +
+                            "This is probably due to a lack of non-discontinuous CATH domains " +
+                            "in the matching FunFam (skipping modelling step).", hit['ff_id'])
                 continue
 
             log_prefix = 'HIT{}'.format(hit_count)
             aln = alns[0]
 
-            log.info("%s: Modelling region against template %s, %s (offset %s) ... ",
+            log.info("%s: Creating task to model template %s, %s (offset %s) ... ",
                      log_prefix, aln['pdb_id'], aln['auth_asym_id'], aln['template_seqres_offset'])
 
-            log.info("%10s %8s: %s", 'QUERY',
-                     hit['query_range'],
-                     aln['target_sequence'], )
-            log.info("%10s %8s: %s", '{}, {}'.format(aln['pdb_id'], aln['auth_asym_id']),
-                     aln['template_seqres_offset'],
-                     aln['template_sequence'])
-            log_br(log)
+            task_kwargs = {k: aln[k] for k in [
+                'target_sequence', 'template_sequence', 'template_seqres_offset', 'pdb_id', 'auth_asym_id']}
 
-            api2submit = models.SubmitAlignment(
-                target_sequence=aln['target_sequence'],
-                template_sequence=aln['template_sequence'],
-                template_seqres_offset=aln['template_seqres_offset'],
-                pdb_id=aln['pdb_id'],
-                auth_asym_id=aln['auth_asym_id'],
-            )
-
-            pdb_out_id = re.sub(r'[\W]+', '', seq_id)
-
-            api2 = managers.SMAlignmentManager(
-                base_url=self.api2_base,
-                submit_data=api2submit,
-                outfile=os.path.join(outdir, "{}.pdb".format(pdb_out_id)),
-                api_user=self.api2_user,
-                api_password=self.api2_password,
-                logger=log,
-            )
-            api2.run()
-            log_br(log)
+            yield AlignTemplateTask(**task_kwargs)
 
 
-class CathSMSequenceFileTask:
+class AlignTemplateTask(luigi.Task):
     """
-    Runs the main modelling pipeline for a set of sequences
+    Runs an AlignTemplate job and caches resulting model as PDB file
     """
 
-    def __init__(self, *, infile, outdir, max_workers, api1_base, api2_base,
-                 api1_user, api2_user, api1_password=None, api2_password=None, 
-                 startseq=1):
-        self.infile = infile
-        self.outdir = outdir
-        self.max_workers = max_workers
-        self.startseq = startseq
-        self.api1_base = api1_base
-        self.api2_base = api2_base
-        self.api1_user = api1_user
-        self.api2_user = api2_user
-        self.api1_password = api1_password
-        self.api2_password = api2_password
+    target_sequence = luigi.Parameter()
+    template_sequence = luigi.Parameter()
+    template_seqres_offset = luigi.Parameter()
+    pdb_id = luigi.Parameter()
+    auth_asym_id = luigi.Parameter()
+    api2_base = luigi.Parameter()
+    api2_user = luigi.Parameter()
+    api2_password = luigi.Parameter()
+    work_dir = luigi.Parameter()
+
+    @property
+    def pdbfile(self):
+        return f'{self.work_dir}/{self.task_id_str}.pdb'
+
+    def output(self):
+        return luigi.LocalTarget(self.pdbfile)
 
     def run(self):
+        log = LOG
 
-        # defining these here because it makes refactoring a bit easier
-        infile = self.infile
-        startseq = self.startseq
-        outdir = self.outdir
-        api1_base = self.api1_base
-        api2_base = self.api2_base
-        api1_user = self.api1_user
-        api2_user = self.api2_user
-        api1_password = self.api1_password
-        api2_password = self.api2_password
+        api2submit = models.SubmitAlignment(
+            target_sequence=self.target_sequence,
+            template_sequence=self.template_sequence,
+            template_seqres_offset=self.template_seqres_offset,
+            pdb_id=self.pdb_id,
+            auth_asym_id=self.auth_asym_id,
+        )
 
-        LOG.info("Parsing sequences from %s", infile)
-        log_hr()
-        sequences = []
-        for seq in SeqIO.parse(infile, "fasta"):
-            LOG.info("SEQUENCE: '%s' (%d residues)",
-                     seq.id, len(seq))
-            sequences.extend([seq])
+        api2 = managers.SMAlignmentManager(
+            base_url=self.api2_base,
+            submit_data=api2submit,
+            outfile=self.pdbfile,
+            api_user=self.api2_user,
+            api_password=self.api2_password,
+            logger=log,
+        )
 
-        re_safe = re.compile(r'[\W]+', re.UNICODE)
-        process_args = []
-        for seq_count, seq in enumerate(sequences[startseq-1:], startseq):
-
-            safe_dirname = re_safe.sub('', seq.id)
-            process_outdir = os.path.abspath(
-                os.path.join(outdir, safe_dirname))
-
-            if not os.path.exists(process_outdir):
-                os.makedirs(process_outdir)
-
-            process_args.extend(
-                [[seq_count, seq.id, seq.seq, process_outdir, api1_user, api2_user]])
-
-        # TODO: use multiprocessing to get this working in parallel
-        # with Pool(max_workers) as p:
-        #    p.map(process_sequence, process_args)
-
-        for pargs in process_args:
-            seq_count, seq_id, seq_str, outdir, api1_user, api2_user = list(
-                pargs)
-            seq_task = CathSMSequenceTask(seq_id=seq_id,
-                                          seq_str=seq_str,
-                                          api1_base=api1_base,
-                                          api2_base=api2_base,
-                                          api1_user=api1_user,
-                                          api2_user=api2_user,
-                                          api1_password=api1_password,
-                                          api2_password=api2_password,
-                                          outdir=outdir, )
-            seq_task.run()
-
-        LOG.info("DONE")
+        api2.run()

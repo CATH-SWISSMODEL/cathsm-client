@@ -5,3 +5,4 @@ xdg
 cathpy
 biopython
 pyswagger
+luigi
