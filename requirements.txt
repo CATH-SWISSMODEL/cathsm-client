@@ -11,7 +11,7 @@ idna==2.8
 importlib-metadata==0.19
 jsonpickle==1.2
 more-itertools==7.2.0
-numpy==1.17.0
+numpy==1.22.0
 packaging==19.1
 pluggy==0.12.0
 py==1.8.0
